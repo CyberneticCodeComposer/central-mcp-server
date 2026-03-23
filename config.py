@@ -1,8 +1,9 @@
 import os
 from dotenv import load_dotenv
-from fastapi import HTTPException
 
-load_dotenv(".env.local")  # load from .env if available
+# Dev fallback only: in production, credentials are passed via the MCP client's env block.
+# When installed via `fastmcp install --env KEY=VALUE`, this load_dotenv is a no-op.
+load_dotenv(".env.local", override=False)
 
 # These can be overridden by MCP inputs or environment variables
 CENTRAL_BASE_URL = os.getenv("CENTRAL_BASE_URL", "")
@@ -55,14 +56,3 @@ def validate_credentials():
             "CENTRAL_CLIENT_SECRET is not set. Please call 'setup_credentials' tool first to provide: base_url, client_id, and client_secret."
         )
     return True
-
-
-async def require_credentials():
-    """
-    FastAPI dependency to ensure credentials are configured before executing endpoints.
-    Raises HTTPException if credentials are not set.
-    """
-    try:
-        validate_credentials()
-    except ValueError as e:
-        raise HTTPException(status_code=401, detail=str(e))
