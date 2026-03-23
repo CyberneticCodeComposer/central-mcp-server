@@ -1,6 +1,56 @@
+from dataclasses import dataclass
 from models import SiteData, SiteMetrics
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
+from typing import List
+from models import (
+    Alert,
+    Client,
+    Device,
+    EventFilters,
+    EventNameCount,
+    EventSourceTypeCount,
+    EventCategoryCount,
+)
+
+
+@dataclass
+class FilterField:
+    api_field: str
+    allowed_values: list[str] | None = None  # None = free text, list = enumerated
+
+
+def build_odata_filter(pairs: list[tuple["FilterField", str]]) -> str | None:
+    """
+    Build an OData v4.0 filter string from (FilterField, value) pairs.
+
+    - Uses 'in (...)' for comma-separated values, 'eq' for single values.
+    - Raises ValueError if a value is not in FilterField.allowed_values (when defined).
+    - Returns None if pairs is empty.
+    """
+    if not pairs:
+        return None
+
+    parts = []
+    for ff, value in pairs:
+        if ff.allowed_values is not None:
+            submitted = [v.strip() for v in value.split(",")]
+            invalid = [v for v in submitted if v not in ff.allowed_values]
+            if invalid:
+                raise ValueError(
+                    f"Invalid value(s) {invalid} for field '{ff.api_field}'. "
+                    f"Allowed: {ff.allowed_values}"
+                )
+
+        if "," in value:
+            values_list = [v.strip() for v in value.split(",")]
+            values_str = ", ".join(f"'{v}'" for v in values_list)
+            parts.append(f"{ff.api_field} in ({values_str})")
+        else:
+            parts.append(f"{ff.api_field} eq '{value}'")
+
+    return " and ".join(parts)
+
 
 SITE_LIMIT = 100
 
@@ -289,7 +339,7 @@ def _safe_float(value):
         return None
 
 
-def clean_device_duplicates(devices: list) -> list:
+def clean_device_data(devices: list[dict]) -> list[Device]:
     """
     Remove duplicate fields from device inventory data.
 
@@ -306,41 +356,33 @@ def clean_device_duplicates(devices: list) -> list:
     cleaned_devices = []
     for device in devices:
         if isinstance(device, dict):
-            cleaned_device = {
-                # Primary identifiers
-                "serial_number": device.get("serialNumber"),
-                "mac_address": device.get("macAddress"),
-                # Device information
-                "device_type": device.get("deviceType"),
-                "model": device.get("model"),
-                "part_number": device.get("partNumber"),
-                "name": device.get("deviceName"),
-                "function": device.get("deviceFunction"),
-                # Status and configuration
-                "status": device.get("status"),
-                "is_provisioned": device.get("isProvisioned", "").lower() == "yes",
-                "persona": device.get("persona"),
-                "role": device.get("role"),
-                "deployment": device.get("deployment"),
-                "tier": device.get("tier"),
-                # Version information
-                "firmware_version": device.get("firmwareVersion"),
-                # Location and grouping
-                "site_id": device.get("siteId"),
-                "site_name": device.get("siteName"),
-                "device_group_name": device.get("deviceGroupName"),
-                "scope_id": device.get("scopeId"),
-                # Network information
-                "ipv4": device.get("ipv4"),
-                # Additional metadata
-                "stack_id": device.get("stackId"),
-            }
-            cleaned_devices.append(cleaned_device)
-
+            cleaned_devices.append(
+                Device(
+                    serial_number=device.get("serialNumber"),
+                    mac_address=device.get("macAddress"),
+                    device_type=device.get("deviceType"),
+                    model=device.get("model"),
+                    part_number=device.get("partNumber"),
+                    name=device.get("deviceName"),
+                    function=device.get("deviceFunction"),
+                    status=device.get("status"),
+                    is_provisioned=device.get("isProvisioned", "").lower() == "yes",
+                    role=device.get("role"),
+                    deployment=device.get("deployment"),
+                    tier=device.get("tier"),
+                    firmware_version=device.get("firmwareVersion"),
+                    site_id=device.get("siteId"),
+                    site_name=device.get("siteName"),
+                    device_group_name=device.get("deviceGroupName"),
+                    scope_id=device.get("scopeId"),
+                    ipv4=device.get("ipv4"),
+                    stack_id=device.get("stackId"),
+                )
+            )
     return cleaned_devices
 
 
-def clean_client_data(clients: list) -> list:
+def clean_client_data(clients: list[dict]) -> list[Client]:
     """
     Transform client API response to match Client model schema.
 
@@ -357,56 +399,110 @@ def clean_client_data(clients: list) -> list:
         if isinstance(client, dict):
             cleaned_client = {
                 # Primary identifiers
-                "mac": client.get("mac"),
-                "name": client.get("name"),
+                "mac": client.get("macAddress"),
+                "name": client.get("clientName"),
                 "ipv4": client.get("ipv4"),
                 "ipv6": client.get("ipv6"),
                 "hostname": client.get("hostName"),
                 # Client classification
-                "type": client.get("type"),
-                "vendor": client.get("vendor"),
-                "manufacturer": client.get("manufacturer"),
-                "category": client.get("category"),
-                "function": client.get("function"),
-                "model_os": client.get("modelOs"),
-                "capabilities": client.get("capabilities"),
+                "connection_type": client.get("clientConnectionType"),
+                "os": client.get("clientOperatingSystem"),
+                "vendor": client.get("clientVendor"),
+                "manufacturer": client.get("clientManufacturer"),
+                "category": client.get("clientCategory"),
+                "function": client.get("clientFunction"),
+                "capabilities": client.get("clientCapabilities"),
                 # Status and health
                 "status": client.get("status"),
-                "status_reason": client.get("statusReason"),
-                "health": client.get("health"),
                 # Connection information
                 "connected_device_type": client.get("connectedDeviceType"),
                 "connected_device_serial": client.get("connectedDeviceSerial"),
                 "connected_to": client.get("connectedTo"),
-                "connected_since": client.get("connectedSince"),
+                "connected_at": client.get("connectedAt"),
                 "last_seen_at": client.get("lastSeenAt"),
                 "port": client.get("port"),
                 # Network configuration
-                "network": client.get("network"),
                 "vlan_id": client.get("vlanId"),
-                "tunnel": client.get("tunnel"),
+                "tunnel_type": client.get("tunnelType"),
                 "tunnel_id": client.get("tunnelId", None),
                 # Wireless-specific fields
-                "ssid": client.get("ssid"),
+                "wlan_name": client.get("wlanName"),
                 "wireless_band": client.get("wirelessBand"),
                 "wireless_channel": client.get("wirelessChannel"),
                 "wireless_security": client.get("wirelessSecurity"),
                 "key_management": client.get("keyManagement"),
-                "vap_bssid": client.get("vapBssid"),
-                "radio_mac": client.get("radioMac"),
+                "bssid": client.get("bssid"),
+                "radio_mac": client.get("radioMacAddress"),
                 # Authentication
                 "user_name": client.get("userName"),
-                "authentication": client.get("authentication"),
+                "authentication": client.get("authenticationType"),
                 # Site information
                 "site_id": client.get("siteId"),
                 "site_name": client.get("siteName"),
                 # Additional metadata
                 "role": client.get("role"),
-                "tags": client.get("tags"),
+                "tags": client.get("clientTags"),
             }
-            cleaned_clients.append(cleaned_client)
+            conn_type = cleaned_client.get("connection_type")
+            if conn_type == "Wired":
+                for f in {
+                    "wlan_name",
+                    "wireless_band",
+                    "wireless_channel",
+                    "wireless_security",
+                    "key_management",
+                    "bssid",
+                    "radio_mac",
+                }:
+                    cleaned_client.pop(f, None)
+            elif conn_type == "Wireless":
+                cleaned_client.pop("port", None)
 
+            cleaned_clients.append(Client(**cleaned_client))
     return cleaned_clients
+
+
+def clean_alert_data(alerts: List[dict]) -> List[Alert]:
+    cleaned_alerts = []
+    for alert in alerts:
+        cleaned_alerts.append(
+            Alert(
+                summary=alert.get("summary"),
+                cleared_reason=alert.get("clearedReason"),
+                created_at=alert.get("createdAt"),
+                priority=alert.get("priority"),
+                updated_at=alert.get("updatedAt"),
+                device_type=alert.get("deviceType"),
+                updated_by=alert.get("updatedBy"),
+                name=alert.get("name"),
+                status=alert.get("status"),
+                category=alert.get("category"),
+                severity=alert.get("severity"),
+            )
+        )
+    return cleaned_alerts
+
+
+def clean_event_filters(msg: dict) -> EventFilters:
+    """Transform raw event-filters API response into a structured EventFilters model."""
+    categories = [
+        EventCategoryCount(category=c["category"], count=c["count"])
+        for c in msg.get("categories", [])
+    ]
+    return EventFilters(
+        total=sum(c.count for c in categories),
+        event_names=[
+            EventNameCount(
+                event_id=e["eventId"], event_name=e["eventName"], count=e["count"]
+            )
+            for e in msg.get("eventNames", [])
+        ],
+        source_types=[
+            EventSourceTypeCount(source_type=s["sourceType"], count=s["count"])
+            for s in msg.get("sourceTypes", [])
+        ],
+        categories=categories,
+    )
 
 
 def compute_time_window(time_range: str) -> tuple[datetime, datetime]:
