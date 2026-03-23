@@ -175,6 +175,7 @@ Add to `.vscode/mcp.json` in your workspace:
 {
   "servers": {
     "central-mcp": {
+      "type": "stdio",
       "command": "uvx",
       "args": ["central-mcp-server"],
       "env": {
