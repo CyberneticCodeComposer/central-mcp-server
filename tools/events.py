@@ -1,14 +1,14 @@
 from fastmcp import Context
 from typing import Literal, Optional
-from models import Event, EventFilters
+from models import Event, EventFilters, PaginatedEvents
 from utils import (
     clean_event_filters,
     compute_time_window,
-    paginated_fetch,
     retry_central_command,
 )
 from tools import READ_ONLY
 
+# API hard cap; limit param must not exceed this
 EVENT_LIMIT = 100
 
 CONTEXT_TYPE = Literal[
@@ -55,12 +55,17 @@ def register(mcp):
         start_time: Optional[str] = None,
         end_time: Optional[str] = None,
         search: Optional[str] = None,
-    ) -> list[Event] | str:
+        limit: int = 50,
+        cursor: Optional[int] = None,
+    ) -> PaginatedEvents | str:
         """
         Retrieve events for a given context (site, device, or client) within a specified time range.
 
         Use central_get_events_count first to understand what event types and volumes exist before
         fetching full event records.
+
+        To page through results, pass the `next_cursor` value from the previous response as `cursor`
+        in the next call. When `next_cursor` is None, there are no more pages.
 
         Parameters:
         - context_type: Type of context entity — what context_identifier refers to. Allowed values:
@@ -76,6 +81,12 @@ def register(mcp):
           Overrides time_range when combined with start_time.
         - search: Search events by name, serial number, host name, or MAC address. Restricted to
           metadata fields only; full-text search is not supported.
+        - limit: Number of events per page (default 50, max 100).
+        - cursor: Pagination cursor from a previous response's `next_cursor` field. Omit or
+          pass None to start from the first page.
+
+        WARNING: last_30d can match thousands of events. Use central_get_events_count first to
+        assess volume, then page incrementally using cursor.
         """
         start_at, end_at = _resolve_time_window(time_range, start_time, end_time)
 
@@ -89,18 +100,27 @@ def register(mcp):
         if search:
             query_params["search"] = search
 
+        query_params["limit"] = limit
+        if cursor is not None:
+            query_params["next"] = cursor
+
         try:
-            events = paginated_fetch(
+            response = retry_central_command(
                 ctx.lifespan_context["conn"],
-                "network-troubleshooting/v1/events",
-                EVENT_LIMIT,
-                additional_params=query_params,
-                use_cursor=True,
-                items_key="events",
+                api_method="GET",
+                api_path="network-troubleshooting/v1/events",
+                api_params=query_params,
             )
         except Exception as e:
             return f"Error fetching events: {e}"
-        return [Event(**event) for event in events]
+
+        msg = response["msg"]
+        raw_events = msg.get("events", [])  # key is "events", not "items"
+        return PaginatedEvents(
+            items=[Event(**e) for e in raw_events],
+            total=msg.get("total", 0),
+            next_cursor=msg.get("next"),
+        )
 
     @mcp.tool(annotations=READ_ONLY)
     async def central_get_events_count(

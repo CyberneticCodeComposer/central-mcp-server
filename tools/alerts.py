@@ -1,9 +1,15 @@
 from fastmcp import Context
-from typing import List, Literal, Optional
-from models import Alert
-from utils import paginated_fetch, build_odata_filter, FilterField, clean_alert_data
+from typing import Literal, Optional
+from models import PaginatedAlerts
+from utils import (
+    retry_central_command,
+    build_odata_filter,
+    FilterField,
+    clean_alert_data,
+)
 from tools import READ_ONLY
 
+# API hard cap; limit param must not exceed this
 ALERT_LIMIT = 100
 
 ALERT_FILTER_FIELDS: dict[str, FilterField] = {
@@ -36,13 +42,19 @@ def register(mcp):
                 "Security",
             ]
         ] = None,
-        sort: str = "createdAt desc",
-    ) -> List[Alert] | str:
+        sort: str = "severity desc",
+        limit: int = 50,
+        cursor: Optional[int] = None,
+    ) -> PaginatedAlerts | str:
         """
         Returns a filtered list of alerts for a specific site. Call central_get_site_name_id_mapping
         first to obtain site_id values, then use this to drill into active issues by device
-        type or category. Prioritize results by severity (Critical > High > Medium > Low)
-        and recency (createdAt).
+        type or category.
+
+        Results are sorted by severity descending by default (Critical first), making the most
+        important alerts appear in the first page. To page through results, pass the `next_cursor`
+        value from the previous response as `cursor` in the next call. When `next_cursor` is None,
+        there are no more pages.
 
         If no alerts match the criteria, returns a message indicating so.
 
@@ -52,8 +64,11 @@ def register(mcp):
             - device_type: Narrow to a device class — "Access Point", "Gateway", "Switch", or "Bridge".
             - category: Narrow to an alert domain — "Clients", "System", "LAN", "WLAN", "WAN",
               "Cluster", "Routing", or "Security".
-            - sort: Sort expression (default "createdAt desc"). Examples: "createdAt asc",
-              "severity desc".
+            - sort: Sort expression (default "severity desc" — most critical first). Examples:
+              "createdAt desc", "createdAt asc".
+            - limit: Number of alerts per page (default 50, max 100).
+            - cursor: Pagination cursor from a previous response's `next_cursor` field. Omit or
+              pass None to start from the first page.
 
         Note: Each alert includes summary, name, category, severity, priority, status,
         deviceType, createdAt, updatedAt, updatedBy, and clearedReason.
@@ -71,13 +86,22 @@ def register(mcp):
         if odata:
             query_params["filter"] = odata
 
-        alerts = paginated_fetch(
+        query_params["limit"] = limit
+        if cursor is not None:
+            query_params["next"] = cursor
+
+        response = retry_central_command(
             ctx.lifespan_context["conn"],
-            "network-notifications/v1/alerts",
-            ALERT_LIMIT,
-            additional_params=query_params,
-            use_cursor=True,
+            api_method="GET",
+            api_path="network-notifications/v1/alerts",
+            api_params=query_params,
         )
-        if not alerts:
+        msg = response["msg"]
+        raw_items = msg.get("items", [])
+        if not raw_items:
             return "No alerts found matching criteria"
-        return clean_alert_data(alerts)
+        return PaginatedAlerts(
+            items=clean_alert_data(raw_items),
+            total=msg.get("total", 0),
+            next_cursor=msg.get("next"),
+        )
