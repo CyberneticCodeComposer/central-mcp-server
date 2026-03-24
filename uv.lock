@@ -144,7 +144,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastmcp", extras = ["code-mode"], specifier = ">=3.1.1" },
-    { name = "pycentral", specifier = "==2.0a16" },
+    { name = "pycentral", specifier = "==2.0a17" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
 ]
 
@@ -931,7 +931,7 @@ memory = [
 
 [[package]]
 name = "pycentral"
-version = "2.0a16"
+version = "2.0a17"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx", extra = ["http2"] },
@@ -943,9 +943,9 @@ dependencies = [
     { name = "requests-oauthlib" },
     { name = "websocket-client" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a3/8c/1b19c67d9db25b1d83b42ca89fbedd5c476ef9711d77fd5f1d861028511e/pycentral-2.0a16.tar.gz", hash = "sha256:4a313fb19a518c041df48da8ee330cad4c663851801789d3563f06c0863d75b6", size = 127865, upload-time = "2026-03-20T20:29:44.692Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/87/0e/9068abaa0d34b25c6fd203bf8394b9c5698a542e272973b2850712c736de/pycentral-2.0a17.tar.gz", hash = "sha256:48c3bb88c6f46da4a1e99f1f792c979bee73a57711adad901fdd23b90c2ceb9d", size = 128494, upload-time = "2026-03-24T20:32:50.796Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/42/ee/05332c19d5666aae982c3fe22f2959940574b97549e48d9d9aab6e334f1f/pycentral-2.0a16-py3-none-any.whl", hash = "sha256:9e341e654869e9730804ca105941dd717df8a4128521031123845932111ca1c1", size = 168719, upload-time = "2026-03-20T20:29:43.353Z" },
+    { url = "https://files.pythonhosted.org/packages/f4/27/4f94c63fdf7effa6a70f031bb6641dc2bd898dabb17ab5ed234576362a84/pycentral-2.0a17-py3-none-any.whl", hash = "sha256:ec1f150c2870f9f529174530bc7ddfdd4762df1a22a46e778c547b09eeb7401b", size = 169300, upload-time = "2026-03-24T20:32:49.504Z" },
 ]
 
 [[package]]
