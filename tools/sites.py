@@ -35,7 +35,9 @@ def register(mcp):
     @mcp.tool(annotations=READ_ONLY)
     async def central_get_site_name_id_mapping(ctx: Context) -> dict:
         """
-        Returns a lightweight mapping of all site names to their IDs and health scores.
+        Returns a lightweight mapping of all site names to their IDs and health scores. The list is
+        sorted by health score (lowest to highest — worst to best) to help quickly identify sites
+        that may need attention. Sites with unknown/None health values are placed last.
 
         Use this before calling central_get_sites or any endpoint that requires a site_id. It is
         especially useful when the user provides a partial or ambiguous site name — verify
@@ -67,4 +69,11 @@ def register(mcp):
                 "total_clients": site.get("clients", {}).get("total", 0),
                 "total_alerts": site.get("alerts", {}).get("total", 0),
             }
+        mapping = dict(
+            sorted(
+                mapping.items(),
+                key=lambda item: item[1]["health"] if item[1]["health"] is not None else float("inf"),
+                reverse=False,
+            )
+        )
         return mapping
