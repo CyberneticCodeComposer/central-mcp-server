@@ -10,22 +10,153 @@ Community MCP server for HPE Aruba Networking Central. This exposes your Central
 > This is **not** an officially supported product of HPE. It is provided as-is, with no warranty or guarantee of fitness for any purpose.
 >
 > - Review your organization's **corporate device and data policies** before connecting this server to any AI assistant.
-> - **Never share production credentials** (client secrets, API keys) with AI model providers unless your security policy explicitly permits it.
+> - **Never share credentials** (API secrets, API keys) with AI model providers unless your security policy explicitly permits it.
 > - All read operations query live data from your HPE Aruba Networking Central instance. Recommended to test MCP server use in non-production or lab environments where possible before running on production.
+
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Getting Started](#getting-started)
+  - [Getting Your Credentials](#getting-your-credentials)
+  - [Installation](#installation)
+  - [MCP Client Configuration](#mcp-client-configuration)
+- [What You Can Ask](#what-you-can-ask)
+- [Dev Setup](#dev-setup)
 
 ---
 
 ## Overview
 
-`central-mcp-server` wraps the HPE Aruba Networking Central REST APIs and exposes them as [MCP (Model Context Protocol)](https://modelcontextprotocol.io) tools. Once configured, AI assistants like Claude or GitHub CoPilot can answer questions like:
+`central-mcp-server` wraps the HPE Aruba Networking Central REST APIs and exposes them as [MCP (Model Context Protocol)](https://modelcontextprotocol.io) tools. Once configured, AI assistants like Claude or GitHub Copilot can answer questions like:
 
 - *"Which sites have poor health scores right now?"*
 - *"Show me all failed wireless clients at HQ in the last 24 hours."*
 - *"What events happened on switch SW-CORE-01 yesterday?"*
 
+![Architecture](architecture.svg)
+
 ---
 
-## Supported Capabilities
+## Getting Started
+
+### Getting Your Credentials
+
+You need three values to connect this server to HPE Aruba Networking Central: `CENTRAL_BASE_URL`, `CENTRAL_CLIENT_ID`, and `CENTRAL_CLIENT_SECRET`.
+
+#### API Gateway Base URL (CENTRAL_BASE_URL)
+
+The API gateway base URL for your Central account (e.g. `https://us5.api.central.arubanetworks.com`).
+
+> For instructions on how to locate your base URL, see [Finding Your Base URL in Central](https://developer.arubanetworks.com/new-central/docs/getting-started-with-rest-apis#finding-your-base-url).
+
+#### API Client Credentials (CENTRAL_CLIENT_ID & CENTRAL_CLIENT_SECRET)
+
+OAuth credentials created through the HPE GreenLake Platform:
+
+1. Log in to your HPE GreenLake account and open **Manage Workspace**.
+2. Click **Personal API clients**.
+3. Click **Create Personal API client**.
+4. Give it a nickname (e.g. `central-mcp-server`) and select your **HPE Aruba Networking Central** instance from the service dropdown.
+5. Click **Create personal API client**.
+6. Copy both the **Client ID** and **Client Secret** immediately. The platform does not store the secret and it cannot be retrieved later.
+
+> Full guide: [Generating and Managing Access Tokens](https://developer.arubanetworks.com/new-central/docs/generating-and-managing-access-tokens)
+
+---
+
+### Installation
+
+Install via [`uv`](https://docs.astral.sh/uv/getting-started/installation/):
+
+```bash
+uv tool install central-mcp-server
+```
+
+> **Note:** `uv tool install central-mcp-server` requires the package to be published to PyPI. To install locally from source, clone the repo and run `uv tool install .` from the repo root instead.
+
+---
+
+### MCP Client Configuration
+
+Replace the placeholder values with your actual credentials in all examples below.
+
+#### Claude Desktop
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+```json
+{
+  "mcpServers": {
+    "central-mcp": {
+      "command": "uvx",
+      "args": ["central-mcp-server"],
+      "env": {
+        "CENTRAL_BASE_URL": "https://us5.api.central.arubanetworks.com",
+        "CENTRAL_CLIENT_ID": "your-client-id",
+        "CENTRAL_CLIENT_SECRET": "your-client-secret"
+      }
+    }
+  }
+}
+```
+
+#### Claude Code
+
+```bash
+claude mcp add central-mcp \
+  -e CENTRAL_BASE_URL=https://us5.api.central.arubanetworks.com \
+  -e CENTRAL_CLIENT_ID=your-client-id \
+  -e CENTRAL_CLIENT_SECRET=your-client-secret \
+  -- uvx central-mcp-server
+```
+
+Credentials are stored in Claude's own settings outside your workspace and are not included in messages sent to Anthropic.
+
+#### GitHub Copilot (VS Code)
+
+First, export credentials as system environment variables (one-time, in `~/.zshrc` or equivalent):
+
+```bash
+export CENTRAL_BASE_URL="https://us5.api.central.arubanetworks.com"
+export CENTRAL_CLIENT_ID="your-client-id"
+export CENTRAL_CLIENT_SECRET="your-client-secret"
+```
+
+Then add `.vscode/mcp.json` to your workspace — this file contains no secrets and is safe to commit:
+
+```json
+{
+  "servers": {
+    "central-mcp": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["central-mcp-server"],
+      "env": {
+        "CENTRAL_BASE_URL": "${env:CENTRAL_BASE_URL}",
+        "CENTRAL_CLIENT_ID": "${env:CENTRAL_CLIENT_ID}",
+        "CENTRAL_CLIENT_SECRET": "${env:CENTRAL_CLIENT_SECRET}"
+      }
+    }
+  }
+}
+```
+
+See the [VS Code setup guide](./docs/guide-2-github-copilot.md) for full steps and troubleshooting.
+
+---
+
+## What You Can Ask
+
+Once connected, you can ask your AI assistant questions like:
+
+- *"Give me a health overview of all sites."*
+- *"Which sites are in poor health right now?"*
+- *"Show me all access points at the Chicago office."*
+- *"What critical alerts are active across the network?"*
+- *"Find all failed wireless clients at HQ in the last 24 hours."*
+- *"What events happened on switch SW-CORE-01 yesterday?"*
 
 ### Tools
 
@@ -77,139 +208,6 @@ The server includes 10 built-in prompts to help AI assistants run common workflo
 
 ---
 
-## Getting Your Credentials
-
-You need three values to connect this server to HPE Aruba Networking Central: `CENTRAL_BASE_URL`, `CENTRAL_CLIENT_ID`, and `CENTRAL_CLIENT_SECRET`.
-
-### CENTRAL_BASE_URL
-
-The API gateway base URL for your Central account (e.g. `https://us5.api.central.arubanetworks.com`).
-
-> For instructions on how to locate your base URL, see [Finding Your Base URL in Central](https://developer.arubanetworks.com/new-central/docs/getting-started-with-rest-apis#finding-your-base-url).
-
-### CENTRAL_CLIENT_ID & CENTRAL_CLIENT_SECRET
-
-OAuth credentials created through the HPE GreenLake Platform:
-
-1. Log in to your HPE GreenLake account and open **Manage Workspace**.
-2. Click **Personal API clients**.
-3. Click **Create Personal API client**.
-4. Give it a nickname (e.g. `central-mcp-server`) and select your **HPE Aruba Networking Central** instance from the service dropdown.
-5. Click **Create personal API client**.
-6. Copy both the **Client ID** and **Client Secret** immediately — the platform does not store the secret and it cannot be retrieved later.
-
-> Full guide: [Generating and Managing Access Tokens](https://developer.arubanetworks.com/new-central/docs/generating-and-managing-access-tokens)
-
----
-
-## Installation
-
-Install via [`uv`](https://docs.astral.sh/uv/getting-started/installation/):
-
-```bash
-uv tool install central-mcp-server
-```
-
-> **Note:** `uv tool install central-mcp-server` requires the package to be published to PyPI. To install locally from source, clone the repo and run `uv tool install .` from the repo root instead.
-
----
-
-## MCP Client Configuration
-
-Replace the placeholder values with your actual credentials in all examples below.
-
-### Claude Desktop
-
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
-
-```json
-{
-  "mcpServers": {
-    "central-mcp": {
-      "command": "uvx",
-      "args": ["central-mcp-server"],
-      "env": {
-        "CENTRAL_BASE_URL": "https://us5.api.central.arubanetworks.com",
-        "CENTRAL_CLIENT_ID": "your-client-id",
-        "CENTRAL_CLIENT_SECRET": "your-client-secret"
-      }
-    }
-  }
-}
-```
-
-### Claude Code
-
-```bash
-fastmcp install claude-code server.py --name "Central MCP" \
-  --env CENTRAL_BASE_URL=https://us5.api.central.arubanetworks.com \
-  --env CENTRAL_CLIENT_ID=your-client-id \
-  --env CENTRAL_CLIENT_SECRET=your-client-secret
-```
-
-### Cursor
-
-Add to `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (project-level):
-
-```json
-{
-  "mcpServers": {
-    "central-mcp": {
-      "command": "uvx",
-      "args": ["central-mcp-server"],
-      "env": {
-        "CENTRAL_BASE_URL": "https://us5.api.central.arubanetworks.com",
-        "CENTRAL_CLIENT_ID": "your-client-id",
-        "CENTRAL_CLIENT_SECRET": "your-client-secret"
-      }
-    }
-  }
-}
-```
-
-### GitHub Copilot (VS Code)
-
-Add to `.vscode/mcp.json` in your workspace:
-
-```json
-{
-  "servers": {
-    "central-mcp": {
-      "type": "stdio",
-      "command": "uvx",
-      "args": ["--from", "central-mcp-server", "central-mcp"],
-      "env": {
-        "CENTRAL_BASE_URL": "<CENTRAL_BASE_URL>",
-        "CENTRAL_CLIENT_ID": "<CENTRAL_CLIENT_ID>",
-        "CENTRAL_CLIENT_SECRET": "<CENTRAL_CLIENT_SECRET>",
-      }
-    }
-  }
-}
-```
-
-### Windsurf
-
-Add to `~/.codeium/windsurf/mcp_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "central-mcp": {
-      "command": "uvx",
-      "args": ["central-mcp-server"],
-      "env": {
-        "CENTRAL_BASE_URL": "https://us5.api.central.arubanetworks.com",
-        "CENTRAL_CLIENT_ID": "your-client-id",
-        "CENTRAL_CLIENT_SECRET": "your-client-secret"
-      }
-    }
-  }
-}
-```
-
----
-
 ## Dev Setup
 
 ```bash
@@ -243,10 +241,4 @@ To install and test the package locally before publishing:
 
 ```bash
 uv tool install .
-```
-
-Run tests:
-
-```bash
-uv run pytest tests/ -v
 ```
