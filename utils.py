@@ -66,9 +66,9 @@ def fetch_site_data_parallel(central_conn) -> tuple:
         tuple: (site_health_data, device_health_data, client_health_data)
     """
     endpoints = [
-        "network-monitoring/v1alpha1/sites-health",
-        "network-monitoring/v1alpha1/sites-device-health",
-        "network-monitoring/v1alpha1/sites-client-health",
+        "network-monitoring/v1/sites-health",
+        "network-monitoring/v1/sites-device-health",
+        "network-monitoring/v1/sites-client-health",
     ]
 
     with ThreadPoolExecutor(max_workers=3) as executor:
