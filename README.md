@@ -70,11 +70,18 @@ OAuth credentials created through the HPE GreenLake Platform:
 
 ### Installation
 
-Install via [`uv`](https://docs.astral.sh/uv/getting-started/installation/):
+Install [`uv`](https://docs.astral.sh/uv/getting-started/installation/) if you haven't already. It's the only prerequisite.
+
+**Using an MCP client (Claude Desktop, Claude Code, GitHub Copilot)?**
+No install command needed. Jump to [MCP Client Configuration](#mcp-client-configuration), the client fetches and runs the server automatically via `uvx`.
+
+**Want the server as a persistent CLI tool on your PATH?**
 
 ```bash
-uv tool install central-mcp-server
+uv tool install --prerelease=allow central-mcp-server
 ```
+
+> `--prerelease=allow` is required because this server depends on `pycentral`, which currently only has a pre-release version on PyPI. uv skips pre-releases by default.
 
 See the [full setup guide](https://developer.arubanetworks.com/new-central/docs/central-mcp-setup) for prerequisites, troubleshooting, and step-by-step instructions.
 
@@ -93,7 +100,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
   "mcpServers": {
     "central-mcp": {
       "command": "uvx",
-      "args": ["central-mcp-server"],
+      "args": ["--prerelease=allow", "central-mcp-server"],
       "env": {
         "CENTRAL_BASE_URL": "your-central-base-url",
         "CENTRAL_CLIENT_ID": "your-client-id",
@@ -113,7 +120,7 @@ claude mcp add central-mcp \
   -e CENTRAL_BASE_URL=your-central-base-url \
   -e CENTRAL_CLIENT_ID=your-client-id \
   -e CENTRAL_CLIENT_SECRET=your-client-secret \
-  -- uvx central-mcp-server
+  -- uvx --prerelease=allow central-mcp-server
 ```
 
 See the [Claude Code setup guide](https://developer.arubanetworks.com/new-central/docs/central-mcp-claude-code-setup) for full steps and troubleshooting.
@@ -128,7 +135,7 @@ Add `.vscode/mcp.json` to your workspace root and add that path to `.gitignore` 
     "central-mcp": {
       "type": "stdio",
       "command": "uvx",
-      "args": ["central-mcp-server"],
+      "args": ["--prerelease=allow", "central-mcp-server"],
       "env": {
         "CENTRAL_BASE_URL": "your-central-base-url",
         "CENTRAL_CLIENT_ID": "your-client-id",
