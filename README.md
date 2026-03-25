@@ -91,7 +91,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
       "command": "uvx",
       "args": ["central-mcp-server"],
       "env": {
-        "CENTRAL_BASE_URL": "https://us5.api.central.arubanetworks.com",
+        "CENTRAL_BASE_URL": "your-central-base-url",
         "CENTRAL_CLIENT_ID": "your-client-id",
         "CENTRAL_CLIENT_SECRET": "your-client-secret"
       }
@@ -104,7 +104,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 
 ```bash
 claude mcp add central-mcp \
-  -e CENTRAL_BASE_URL=https://us5.api.central.arubanetworks.com \
+  -e CENTRAL_BASE_URL=your-central-base-url \
   -e CENTRAL_CLIENT_ID=your-client-id \
   -e CENTRAL_CLIENT_SECRET=your-client-secret \
   -- uvx central-mcp-server
@@ -122,7 +122,7 @@ Add `.vscode/mcp.json` to your workspace root and add that path to `.gitignore` 
       "command": "uvx",
       "args": ["central-mcp-server"],
       "env": {
-        "CENTRAL_BASE_URL": "https://us5.api.central.arubanetworks.com",
+        "CENTRAL_BASE_URL": "your-central-base-url",
         "CENTRAL_CLIENT_ID": "your-client-id",
         "CENTRAL_CLIENT_SECRET": "your-client-secret"
       }
@@ -219,7 +219,7 @@ uv sync
 Create `.env` with your credentials:
 
 ```
-CENTRAL_BASE_URL=https://us5.api.central.arubanetworks.com
+CENTRAL_BASE_URL=your-central-base-url
 CENTRAL_CLIENT_ID=your-client-id
 CENTRAL_CLIENT_SECRET=your-client-secret
 ```
