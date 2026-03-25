@@ -29,7 +29,7 @@ Community MCP server for HPE Aruba Networking Central. This exposes your Central
 
 ## Overview
 
-`central-mcp-server` wraps the HPE Aruba Networking Central REST APIs and exposes them as [MCP (Model Context Protocol)](https://modelcontextprotocol.io) tools. Once configured, AI assistants like Claude or GitHub Copilot can answer questions like:
+`central-mcp-server` wraps Central REST APIs and exposes them as [MCP (Model Context Protocol)](https://modelcontextprotocol.io) tools. Once configured, AI assistants like Claude or GitHub Copilot can answer questions like:
 
 - *"Which sites have poor health scores right now?"*
 - *"Show me all failed wireless clients at HQ in the last 24 hours."*
@@ -45,7 +45,7 @@ See the [full overview guide](https://developer.arubanetworks.com/new-central/do
 
 ### Getting Your Credentials
 
-You need three values to connect this server to HPE Aruba Networking Central: `CENTRAL_BASE_URL`, `CENTRAL_CLIENT_ID`, and `CENTRAL_CLIENT_SECRET`.
+You need three values to connect this server to Central's REST APIs: `CENTRAL_BASE_URL`, `CENTRAL_CLIENT_ID`, and `CENTRAL_CLIENT_SECRET`.
 
 #### API Gateway Base URL (CENTRAL_BASE_URL)
 
