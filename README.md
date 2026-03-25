@@ -37,6 +37,8 @@ Community MCP server for HPE Aruba Networking Central. This exposes your Central
 
 ![Architecture](architecture.svg)
 
+See the [full overview guide](https://developer.arubanetworks.com/new-central/docs/central-mcp-overview) for a deeper look at capabilities, limitations, and how the server works.
+
 ---
 
 ## Getting Started
@@ -74,6 +76,8 @@ Install via [`uv`](https://docs.astral.sh/uv/getting-started/installation/):
 uv tool install central-mcp-server
 ```
 
+See the [full setup guide](https://developer.arubanetworks.com/new-central/docs/central-mcp-setup) for prerequisites, troubleshooting, and step-by-step instructions.
+
 ---
 
 ### MCP Client Configuration
@@ -100,6 +104,8 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 }
 ```
 
+See the [Claude Desktop setup guide](https://developer.arubanetworks.com/new-central/docs/central-mcp-claude-desktop-setup) for full steps and troubleshooting.
+
 #### Claude Code
 
 ```bash
@@ -109,6 +115,8 @@ claude mcp add central-mcp \
   -e CENTRAL_CLIENT_SECRET=your-client-secret \
   -- uvx central-mcp-server
 ```
+
+See the [Claude Code setup guide](https://developer.arubanetworks.com/new-central/docs/central-mcp-claude-code-setup) for full steps and troubleshooting.
 
 #### GitHub Copilot (VS Code)
 
@@ -136,7 +144,7 @@ Add to `.gitignore`:
 .vscode/mcp.json
 ```
 
-See the [VS Code setup guide](./docs/guide-2-github-copilot.md) for full steps and troubleshooting.
+See the [GitHub CoPilot setup guide](https://developer.arubanetworks.com/new-central/docs/central-github-copilot-setup) for full steps and troubleshooting.
 
 ---
 
@@ -150,6 +158,8 @@ Once connected, you can ask your AI assistant questions like:
 - *"What critical alerts are active across the network?"*
 - *"Find all failed wireless clients at HQ in the last 24 hours."*
 - *"What events happened on switch SW-CORE-01 yesterday?"*
+
+See [Central MCP Server in Action]((https://developer.arubanetworks.com/new-central/docs/central-mcp-in-action)) for real query examples across all supported clients.
 
 ### Tools
 
