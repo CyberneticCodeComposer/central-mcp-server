@@ -1,6 +1,6 @@
 from fastmcp import Context
 from typing import List, Optional, Literal
-from models import Device
+from models import Device, ErrorResult
 from utils import clean_device_data, build_odata_filter, FilterField, retry_pycentral_method
 from pycentral.new_monitoring import MonitoringDevices
 from tools import READ_ONLY
@@ -31,7 +31,7 @@ def register(mcp):
         is_provisioned: Optional[bool] = None,
         site_assigned: Optional[bool] = None,
         sort: Optional[str] = None,
-    ) -> List[Device] | str:
+    ) -> List[Device] | ErrorResult:
         """
         Returns a filtered list of devices from Central using OData v4.0 filter syntax.
 
@@ -88,10 +88,10 @@ def register(mcp):
                 sort=sort,
             )
         except Exception as e:
-            return f"Error fetching devices: {e}"
+            return ErrorResult(error="Error fetching devices", detail=str(e))
 
         if not devices:
-            return "No devices found matching the specified criteria."
+            return ErrorResult(error="No devices found matching the specified criteria.")
         return clean_device_data(devices)
 
     @mcp.tool(annotations=READ_ONLY)
@@ -99,7 +99,7 @@ def register(mcp):
         ctx: Context,
         serial_number: Optional[str] = None,
         device_name: Optional[str] = None,
-    ) -> Device | str:
+    ) -> Device | ErrorResult:
         """
         Find a single device by unique identifier. Returns the device if exactly one match is found, otherwise returns an error message.
 
@@ -108,10 +108,10 @@ def register(mcp):
         - device_name: Device display name. Use only if serial number is unknown.
         """
         if not serial_number and not device_name:
-            return "Please provide at least one unique identifier: serial_number or device_name."
+            return ErrorResult(error="Please provide at least one unique identifier: serial_number or device_name.")
 
         if serial_number and device_name:
-            return "Please provide only one unique identifier: either serial_number or device_name, not both."
+            return ErrorResult(error="Please provide only one unique identifier: either serial_number or device_name, not both.")
 
         pairs = [
             (DEVICE_FILTER_FIELDS[k], v)
@@ -126,12 +126,12 @@ def register(mcp):
                 filter_str=filter_str,
             )
         except Exception as e:
-            return f"Error occurred while fetching device data: {e}"
+            return ErrorResult(error="Error occurred while fetching device data", detail=str(e))
         if "items" not in device_resp:
-            return f"Unexpected API error response: {device_resp}"
+            return ErrorResult(error="Unexpected API error response", detail=str(device_resp))
 
         if len(device_resp["items"]) == 0:
-            return "No device found matching the provided criteria."
+            return ErrorResult(error="No device found matching the provided criteria.")
         if len(device_resp["items"]) > 1:
-            return "Multiple devices found matching the criteria. Use serial_number for a unique match."
+            return ErrorResult(error="Multiple devices found matching the criteria. Use serial_number for a unique match.")
         return clean_device_data(device_resp["items"])[0]
