@@ -1,3 +1,5 @@
+import random
+import time
 from dataclasses import dataclass
 from models import SiteData, SiteMetrics
 from concurrent.futures import ThreadPoolExecutor
@@ -191,13 +193,26 @@ def paginated_fetch(
     return items
 
 
+_RETRY_BASE_DELAY = 1.0  # seconds; actual delay = base * 2^(attempt-1) + jitter
+_RETRY_MAX_DELAY = 30.0  # cap per sleep
+
+
+def _backoff_delay(attempt: int, retry_after: float | None = None) -> None:
+    """Sleep before a retry. Uses Retry-After if provided, else exponential backoff."""
+    if retry_after is not None:
+        delay = min(retry_after, _RETRY_MAX_DELAY)
+    else:
+        delay = min(_RETRY_BASE_DELAY * (2 ** (attempt - 1)) + random.random(), _RETRY_MAX_DELAY)
+    time.sleep(delay)
+
+
 def retry_central_command(
     central_conn, api_method, api_path, api_params=None, max_retries=5
 ):
-    """Call central_conn.command and retry immediately up to max_retries on transient errors.
+    """Call central_conn.command and retry with exponential backoff on transient errors.
 
-    Does not sleep between attempts. On persistent server errors (5xx) or rate-limit (429)
-    this raises APIRetryError so the caller can abort and avoid partial DB writes.
+    On persistent server errors (5xx) or rate-limit (429) retries up to max_retries
+    times with exponential backoff. Respects the Retry-After header on 429 responses.
     Client errors (4xx) are raised immediately.
     """
     api_params = api_params or {}
@@ -217,6 +232,8 @@ def retry_central_command(
                 exc,
             )
             last_response = {"code": 0, "msg": str(exc)}
+            if attempt < max_retries:
+                _backoff_delay(attempt)
             continue
 
         code = resp.get("code", 0)
@@ -235,6 +252,17 @@ def retry_central_command(
                 max_retries,
             )
             last_response = resp
+            if attempt < max_retries:
+                retry_after = None
+                if code == 429:
+                    headers = resp.get("headers") or {}
+                    ra = headers.get("Retry-After")
+                    if ra is not None:
+                        try:
+                            retry_after = float(ra)
+                        except (ValueError, TypeError):
+                            pass
+                _backoff_delay(attempt, retry_after)
             continue
 
         # client errors -> raise immediately
