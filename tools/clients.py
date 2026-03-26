@@ -1,7 +1,7 @@
 from fastmcp import Context
 from typing import List, Optional, Literal
 from models import Client
-from utils import clean_client_data, build_odata_filter, FilterField
+from utils import clean_client_data, build_odata_filter, FilterField, retry_pycentral_method
 from pycentral.new_monitoring.clients import Clients
 from tools import READ_ONLY
 
@@ -66,7 +66,8 @@ def register(mcp):
         filter_str = build_odata_filter(pairs)
 
         try:
-            clients = Clients.get_all_clients(
+            clients = retry_pycentral_method(
+                Clients.get_all_clients,
                 central_conn=ctx.lifespan_context["conn"],
                 site_id=site_id,
                 site_name=site_name,
@@ -98,7 +99,8 @@ def register(mcp):
         for wireless clients.
         """
         try:
-            result = Clients.get_client_details(
+            result = retry_pycentral_method(
+                Clients.get_client_details,
                 central_conn=ctx.lifespan_context["conn"],
                 client_mac=mac_address,
             )

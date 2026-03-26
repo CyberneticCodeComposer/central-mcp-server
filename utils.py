@@ -203,6 +203,30 @@ def paginated_fetch(
     return items
 
 
+def retry_pycentral_method(fn, *args, max_retries: int = 5, **kwargs):
+    """Retry a high-level pycentral library call with exponential backoff.
+
+    Use this when the pycentral method handles pagination internally and cannot
+    be replaced with retry_central_command (which operates at the raw HTTP level).
+    """
+    last_exc: Exception | None = None
+    for attempt in range(1, max_retries + 1):
+        try:
+            return fn(*args, **kwargs)
+        except Exception as exc:
+            _logger.warning(
+                "pycentral method %s failed attempt %d/%d: %s",
+                getattr(fn, "__name__", fn),
+                attempt,
+                max_retries,
+                exc,
+            )
+            last_exc = exc
+            if attempt < max_retries:
+                _backoff_delay(attempt)
+    raise last_exc
+
+
 _RETRY_BASE_DELAY = 1.0  # seconds; actual delay = base * 2^(attempt-1) + jitter
 _RETRY_MAX_DELAY = 30.0  # cap per sleep
 

@@ -1,7 +1,7 @@
 from fastmcp import Context
 from typing import List, Optional, Literal
 from models import Device
-from utils import clean_device_data, build_odata_filter, FilterField
+from utils import clean_device_data, build_odata_filter, FilterField, retry_pycentral_method
 from pycentral.new_monitoring import MonitoringDevices
 from tools import READ_ONLY
 
@@ -80,7 +80,8 @@ def register(mcp):
         )
 
         try:
-            devices = MonitoringDevices.get_all_device_inventory(
+            devices = retry_pycentral_method(
+                MonitoringDevices.get_all_device_inventory,
                 central_conn=ctx.lifespan_context["conn"],
                 filter_str=filter_str,
                 site_assigned=site_assigned,
@@ -119,8 +120,10 @@ def register(mcp):
         ]
         filter_str = build_odata_filter(pairs)
         try:
-            device_resp = MonitoringDevices.get_device_inventory(
-                central_conn=ctx.lifespan_context["conn"], filter_str=filter_str
+            device_resp = retry_pycentral_method(
+                MonitoringDevices.get_device_inventory,
+                central_conn=ctx.lifespan_context["conn"],
+                filter_str=filter_str,
             )
         except Exception as e:
             return f"Error occurred while fetching device data: {e}"
