@@ -8,7 +8,7 @@ from tools import READ_ONLY
 # API field definitions — update allowed_values when Central adds/removes enum options
 DEVICE_FILTER_FIELDS: dict[str, FilterField] = {
     "site_id": FilterField("siteId"),
-    "device_type": FilterField("deviceType", ["ACCESS_POINT", "SWITCH", "GATEWAY"]),
+    "device_type": FilterField("deviceType", ["Access Point", "Switch", "Gateway"]),
     "device_name": FilterField("deviceName"),
     "serial_number": FilterField("serialNumber"),
     "model": FilterField("model"),
@@ -23,7 +23,7 @@ def register(mcp):
     async def central_get_devices(
         ctx: Context,
         site_id: Optional[str] = None,
-        device_type: Optional[Literal["ACCESS_POINT", "SWITCH", "GATEWAY"]] = None,
+        device_type: Optional[Literal["Access Point", "Switch", "Gateway"]] = None,
         device_name: Optional[str] = None,
         serial_number: Optional[str] = None,
         model: Optional[str] = None,
@@ -40,7 +40,7 @@ def register(mcp):
 
         Parameters:
         - site_id: Exact site ID or comma-separated list of IDs.
-        - device_type: ACCESS_POINT, SWITCH, or GATEWAY. Comma-separated for multiple.
+        - device_type: "Access Point", "Switch", or "Gateway". Comma-separated for multiple.
         - device_name: Device display name. Comma-separated for multiple.
         - serial_number: Device serial number. Comma-separated for multiple.
         - model: Device model (e.g., AP-735-RWF1). Comma-separated for multiple.
