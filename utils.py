@@ -44,10 +44,11 @@ def build_odata_filter(pairs: list[tuple["FilterField", str]]) -> str | None:
 
         if "," in value:
             values_list = [v.strip() for v in value.split(",")]
-            values_str = ", ".join(f"'{v}'" for v in values_list)
+            values_str = ", ".join(f"'{v.replace(chr(39), chr(39) * 2)}'" for v in values_list)
             parts.append(f"{ff.api_field} in ({values_str})")
         else:
-            parts.append(f"{ff.api_field} eq '{value}'")
+            escaped = value.replace("'", "''")
+            parts.append(f"{ff.api_field} eq '{escaped}'")
 
     return " and ".join(parts)
 
