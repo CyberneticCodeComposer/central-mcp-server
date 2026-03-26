@@ -56,6 +56,17 @@ def build_odata_filter(pairs: list[tuple["FilterField", str]]) -> str | None:
 SITE_LIMIT = 100
 
 
+def calculate_health_score(health_obj: dict) -> int | None:
+    """Return weighted health score (0–100) from a Poor/Fair/Good distribution dict, or None."""
+    if all(k in health_obj for k in ["Poor", "Fair", "Good"]):
+        return round(
+            (health_obj["Poor"] * 0)
+            + (health_obj["Fair"] * 0.5)
+            + (health_obj["Good"] * 1)
+        )
+    return None
+
+
 def fetch_site_data_parallel(central_conn) -> tuple:
     """
     Fetch site health, device health, and client health data in parallel.
@@ -238,12 +249,9 @@ def retry_central_command(
 def transform_to_site_data(site_raw: dict) -> SiteData:
     """Transform raw Central API data to standardized SiteData model."""
     health_obj = groups_to_map(site_raw.get("health", {}))
-    if all(k in health_obj for k in ["Poor", "Fair", "Good"]):
-        health_obj["Summary"] = round(
-            (health_obj["Poor"] * 0)
-            + (health_obj["Fair"] * 0.5)
-            + (health_obj["Good"] * 1)
-        )
+    score = calculate_health_score(health_obj)
+    if score is not None:
+        health_obj["Summary"] = score
         health_obj.pop("Total", None)
 
     devices_obj = groups_to_map(site_raw.get("devices", {}))
